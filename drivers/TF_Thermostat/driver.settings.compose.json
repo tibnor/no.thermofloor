@@ -202,5 +202,22 @@
 					"size": 1
 				}
   }]
+	},
+	{
+		"id": "power_in_watts",
+		"type": "number",
+		"attr": {
+			"min": 0,
+			"max": 5000
+		},
+		"value": 1500,
+		"label": {
+			"en": "Power in Watts",
+			"nl": "Vermogen in Watt"
+		},
+		"hint": {
+			"en": "The power consumption of the thermostat in watts.",
+			"nl": "Het stroomverbruik van de thermostaat in watt."
+		}
 	}
 ]

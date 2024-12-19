@@ -7,12 +7,29 @@ const {
 } = require('../../lib/map/TF_mappings.js');
 
 class TF_ThermostatDevice extends ZwaveDevice {
+  async registerEnergyUpdater() {
+    this.intervalUpdateEnergy = setInterval(() => {
+      const now = Date.now();
+      const lastOnTime = this.getStoreValue('lastOnTime') || now;
+      const onTime = (now - lastOnTime) / 3600000;
+      const energy = this.getStoreValue('energy') || 0;
+      const power = this.getSetting('power_in_watts');
+      const newEnergy = energy + (power * onTime) / 1000;
+      this.setStoreValue('energy', newEnergy).catch(this.error);
+      this.setCapabilityValue('meter_power', newEnergy).catch(this.error);
+      this.setStoreValue('lastOnTime', now).catch(this.error);
+    }, 60_000);
+  }
+
   async onNodeInit() {
     // enable debugging
     // this.enableDebug();
 
     // print the node's info to the console
     // this.printNode();
+    this.addCapability('measure_power');
+    this.addCapability('meter_power');
+    this.intervalUpdateEnergy = null;
 
     // registerCapability for measure_temperature for FW <=18.
     this.registerCapability('measure_temperature', 'SENSOR_MULTILEVEL', {
@@ -29,10 +46,26 @@ class TF_ThermostatDevice extends ZwaveDevice {
         if (report && report.hasOwnProperty('Value')) {
           const thermofloor_onoff_state = report.Value === 255;
           if (thermofloor_onoff_state !== this.getCapabilityValue('thermofloor_onoff')) {
-            // Not needed since capability change will trigger the trigger card automatically
-            // this.homey.app[`triggerThermofloorOnoff${thermofloor_onoff_state ? 'True' : 'False'}`].trigger(this, null, null);
+            const power = this.getSetting('power_in_watts');
+            if (thermofloor_onoff_state) {
+              this.setCapabilityValue('measure_power', power).catch(this.error);
+              this.setStoreValue('lastOnTime', Date.now());
+              this.registerEnergyUpdater();
+            } else {
+              if (this.intervalUpdateEnergy) {
+                clearInterval(this.intervalUpdateEnergy);
+              }
+              this.setCapabilityValue('measure_power', 0).catch(this.error);
+              const lastOnTime = this.getStoreValue('lastOnTime') || Date.now();
+              const onTime = (Date.now() - lastOnTime) / 3600000;
+              const energy = this.getStoreValue('energy') || 0;
+              const newEnergy = energy + (power * onTime) / 1000;
+              this.setStoreValue('energy', newEnergy).catch(this.error);
+              this.setCapabilityValue('meter_power', newEnergy).catch(this.error);
+              
+            }
             return thermofloor_onoff_state;
-          }
+          }         
         }
         return null;
       },
@@ -228,6 +261,19 @@ class TF_ThermostatDevice extends ZwaveDevice {
         return null;
       },
     });
+
+    this.registerCapabilityListener('BASIC', 'thermofloor_onoff', async (value) => {
+   
+    });
+    if (this.getCapabilityValue('thermofloor_onoff')) {
+      this.registerEnergyUpdater();
+      this.setCapabilityValue('measure_power', this.getSetting('power_in_watts')).catch(this.error);
+    } else {
+      this.setCapabilityValue('measure_power', 0).catch(this.error);
+    }
+    this.setCapabilityValue('meter_power', this.getStoreValue('energy') || 0).catch(this.error);
+    this.setStoreValue('lastOnTime', Date.now()).catch(this.error);
+
   }
 
 }

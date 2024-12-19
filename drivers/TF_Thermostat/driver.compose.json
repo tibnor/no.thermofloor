@@ -11,7 +11,7 @@
 	"platforms": ["local", "cloud"],
 	"connectivity": ["zwave"],
 	"class": "thermostat",
-	"capabilities": ["measure_temperature", "thermofloor_onoff", "thermofloor_mode", "target_temperature"],
+	"capabilities": ["measure_temperature", "thermofloor_onoff", "thermofloor_mode", "target_temperature", "measure_power", "meter_power"],
 	"capabilitiesOptions": {
 		"target_temperature": {
 			"min": 5,
@@ -26,12 +26,6 @@
 			"titleFalse": {
 				"en": "Idle"
 			}
-		}
-	},
-	"energy": {
-		"approximation": {
-			"usageOn": 0,
-			"usageOff": 0
 		}
 	},
 	"zwave": {
